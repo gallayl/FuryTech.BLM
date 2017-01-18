@@ -13,29 +13,45 @@ using BLM.Attributes;
 
 namespace BLM.EF6
 {
-    public class EfRepository<T> : IRepository<T> where T : class, new()
+    public class EfRepository<T> : IRepository<T>, IEfRepository where T : class, new()
     {
 
         private readonly DbContext _dbcontext;
         private readonly DbSet<T> _dbset;
         private readonly Type _type;
+        private readonly bool _disposeDbContextOnDispose;
+
+        private readonly Dictionary<string, IEfRepository> _childRepositories = new Dictionary<string, IEfRepository>();
 
         /// <summary>
         /// If there are inherited objets, which have LogicalDeleteAttribue-s on it, we throw an exception
         /// </summary>
         public bool IgnoreLogicalDeleteError { get; set; } = false;
 
-        public EfRepository(DbContext db)
+        public EfRepository(DbContext db, bool disposeDbContextOnDispose = true)
         {
             _dbcontext = db;
             _dbset = db.Set<T>();
             _type = typeof(T);
+            _disposeDbContextOnDispose = disposeDbContextOnDispose;
             // TODO: What about the inherited classes? 
         }
 
         private EfContextInfo GetContextInfo(IIdentity user)
         {
             return new EfContextInfo(user, _dbcontext);
+        }
+
+        private IEfRepository GetChildRepositoryFor(DbEntityEntry entry)
+        {
+            var repoKey = entry.Entity.GetType().FullName;
+            if (_childRepositories.ContainsKey(repoKey))
+            {
+                return _childRepositories[repoKey];
+            }
+            var childRepositoryType = typeof(EfRepository<>).MakeGenericType(entry.Entity.GetType());
+            var childRepo = Activator.CreateInstance(childRepositoryType, _dbcontext, false) as IEfRepository;
+            return childRepo;
         }
 
         #region Static things
@@ -119,7 +135,14 @@ namespace BLM.EF6
 
         public void Dispose()
         {
-            _dbcontext?.Dispose();
+            foreach (KeyValuePair<string, IEfRepository> childRepo in _childRepositories)
+            {
+                childRepo.Value?.Dispose();
+            }
+            if (_disposeDbContextOnDispose)
+            {
+                _dbcontext?.Dispose();
+            }
         }
 
         public IQueryable<T> Entities(IIdentity user)
@@ -179,7 +202,7 @@ namespace BLM.EF6
             return AuthorizeEntityChangeAsync(user, ent).Result;
         }
 
-        private async Task<AuthorizationResult> AuthorizeEntityChangeAsync(IIdentity user, DbEntityEntry ent)
+        public async Task<AuthorizationResult> AuthorizeEntityChangeAsync(IIdentity user, DbEntityEntry ent)
         {
 
             if (ent.State == EntityState.Unchanged || ent.State == EntityState.Detached)
@@ -211,7 +234,11 @@ namespace BLM.EF6
             }
             else
             {
-                return AuthorizationResult.Fail($"Changes for entity type '{ent.Entity.GetType().FullName}' is not supported in a context of a repository with type '{typeof(T).FullName}'", ent.Entity);
+                var childRepositoryType = typeof(EfRepository<>).MakeGenericType(ent.Entity.GetType());
+                var childRepo = Activator.CreateInstance(childRepositoryType, _dbcontext, false) as IEfRepository;
+                var authResult = await childRepo.AuthorizeEntityChangeAsync(user, ent);
+                childRepo.Dispose();
+                return authResult;
             }
         }
         private static async Task<T> CreateWithValuesAsync(DbPropertyValues values, Type type = null)
@@ -236,12 +263,9 @@ namespace BLM.EF6
                         property.SetValue(entity, Convert.ChangeType(value, property.PropertyType), null);
                     }
                 }
-
                 return entity;
             });
         }
-
-
 
         public void SaveChanges(IIdentity user)
         {

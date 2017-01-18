@@ -48,11 +48,13 @@
   <ItemGroup>
     <Compile Include="AuthorizerTests.cs" />
     <Compile Include="ListenerTests.cs" />
+    <Compile Include="LogicalDeleteEntity.cs" />
     <Compile Include="MockCollectionAuthorizer.cs" />
     <Compile Include="MockCollectionAuthorizer2.cs" />
     <Compile Include="MockCreateAuthorizer.cs" />
     <Compile Include="MockEntity.cs" />
     <Compile Include="MockModifyAuthorizer.cs" />
+    <Compile Include="MockNestedEntity.cs" />
     <Compile Include="MockRemoveAuthorizer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TypeLoaderTests.cs" />
