@@ -1,4 +1,4 @@
-﻿using BLM.Interfaces.Interpret;
+﻿using BLM.Interfaces;
 
 namespace BLM.EF6.Tests
 {

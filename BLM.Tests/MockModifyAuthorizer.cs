@@ -1,5 +1,6 @@
 ﻿using BLM.Interfaces.Authorize;
 using System.Threading.Tasks;
+using BLM.Interfaces;
 
 namespace BLM.Tests
 {

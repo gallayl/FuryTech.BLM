@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using BLM.Interfaces;
 using BLM.Interfaces.Authorize;
 using BLM.Interfaces.Interpret;
 

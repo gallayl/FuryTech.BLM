@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using BLM.Extensions;
+using BLM.Interfaces;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace BLM.Tests

@@ -1,4 +1,4 @@
-﻿namespace BLM
+﻿namespace BLM.Interfaces
 {
     public interface IBlmEntry
     {

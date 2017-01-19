@@ -1,4 +1,7 @@
-﻿namespace BLM.Interfaces.Interpret
+﻿using BLM.Interfaces;
+using BLM.Interfaces.Interpret;
+
+namespace BLM
 {
     public abstract class InterpretBeforeCreate<T> : IInterpretBeforeCreate<T, T>
     {

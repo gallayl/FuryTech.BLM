@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using BLM.Extensions;
 using BLM.Exceptions;
 using BLM.Attributes;
+using BLM.Interfaces;
 
 namespace BLM.EF6
 {

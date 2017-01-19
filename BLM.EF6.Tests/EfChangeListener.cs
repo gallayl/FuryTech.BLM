@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using BLM.Interfaces;
 using BLM.Tests;
 
 namespace BLM.EF6.Tests
