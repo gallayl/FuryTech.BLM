@@ -59,6 +59,10 @@
     <Compile Include="AuthorizationResult.cs" />
     <Compile Include="Authorize.cs" />
     <Compile Include="GenericContextInfo.cs" />
+    <Compile Include="AuthorizeCollection.cs" />
+    <Compile Include="AuthorizeCreate.cs" />
+    <Compile Include="AuthorizeModify.cs" />
+    <Compile Include="AuthorizeRemove.cs" />
     <Compile Include="Interpret.cs" />
     <Compile Include="Listen.cs" />
     <Compile Include="Loader.cs" />

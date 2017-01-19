@@ -3,9 +3,9 @@ using System.Threading.Tasks;
 
 namespace BLM.Tests
 {
-    public class MockModifyAuthorizer : IAuthorizeModify<MockEntity> {
+    public class MockModifyAuthorizer : AuthorizeModify<MockEntity> {
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        public async Task<AuthorizationResult> CanModifyAsync(MockEntity originalEntity, MockEntity modifiedEntity, IContextInfo ctx)
+        public override async Task<AuthorizationResult> CanModifyAsync(MockEntity originalEntity, MockEntity modifiedEntity, IContextInfo ctx)
         {
             if (modifiedEntity.IsValid)
             {
