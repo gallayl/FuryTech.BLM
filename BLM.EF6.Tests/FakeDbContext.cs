@@ -13,6 +13,8 @@ namespace BLM.EF6.Tests
 
         public virtual DbSet<MockEntity> MockEntities { get; set; }
         public virtual DbSet<MockNestedEntity> MockNestedEntities { get; set; }
+
+        public virtual DbSet<MockInterpretedEntity> MockInterpretedEntities { get; set; }
     }
 
 }

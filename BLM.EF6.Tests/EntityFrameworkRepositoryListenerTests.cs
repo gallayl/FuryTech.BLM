@@ -1,13 +1,6 @@
-﻿using System;
-using System.Text;
-using System.Linq;
-using System.Security.Principal;
-using System.Threading;
+﻿using System.Linq;
 using System.Threading.Tasks;
-using System.Transactions;
-using BLM.Interfaces.Listen;
 using BLM.Tests;
-using Effort.Provider;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace BLM.EF6.Tests
@@ -16,7 +9,7 @@ namespace BLM.EF6.Tests
     /// Summary description for ListenerTests
     /// </summary>
     [TestClass]
-    public class EntityFrameworkRepositoryListenerTests : AbstractEfRepositoryTest
+    public class RepositoryListenerTests : AbstractEfRepositoryTest
     {
         [TestCleanup]
         public override void Cleanup()

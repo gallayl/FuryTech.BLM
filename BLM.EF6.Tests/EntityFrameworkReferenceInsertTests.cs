@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BLM.Exceptions;
 using BLM.Tests;
@@ -7,7 +9,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace BLM.EF6.Tests
 {
     [TestClass]
-    public class EntityFrameworkReferenceInsertTests : AbstractEfRepositoryTest
+    public class ReferenceInsertTests : AbstractEfRepositoryTest
     {
         
 
@@ -106,6 +108,48 @@ namespace BLM.EF6.Tests
                 MockEntities = new List<MockEntity> { new MockEntity { IsValid = true }, new MockEntity { IsValid = true } }
             });
             await _repoNested.SaveChangesAsync(_identity);
+        }
+
+        [TestMethod]
+        public async Task AddOneInvalidDeepInsert()
+        {
+            await _repoNested.AddAsync(_identity, new MockNestedEntity()
+            {
+                MockEntities = new List<MockEntity> { new MockEntity { IsValid = true }, new MockEntity { IsValid = false } }
+            });
+
+            try
+            {
+                await _repoNested.SaveChangesAsync(_identity);
+
+            }
+            catch (Exception e)
+            {
+                Assert.IsInstanceOfType(e, typeof(AuthorizationFailedException));
+                Assert.AreEqual(0, _db.MockEntities.Count());
+                Assert.AreEqual(0, _db.MockNestedEntities.Count());
+            }
+        }
+
+        [TestMethod]
+        public async Task AddOneValidAndOneInvalidDeepInsert()
+        {
+            await _repoNested.AddAsync(_identity, new MockNestedEntity()
+            {
+                MockEntities = new List<MockEntity> { new MockEntity { IsValid = true }, new MockEntity { IsValid = false } }
+            });
+
+            try
+            {
+                await _repoNested.SaveChangesAsync(_identity);
+
+            }
+            catch (Exception e)
+            {
+                Assert.IsInstanceOfType(e, typeof(AuthorizationFailedException));
+                Assert.AreEqual(0, _db.MockEntities.Count());
+                Assert.AreEqual(0, _db.MockNestedEntities.Count());
+            }
         }
     }
 }
