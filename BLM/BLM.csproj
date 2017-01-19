@@ -63,6 +63,8 @@
     <Compile Include="AuthorizeCreate.cs" />
     <Compile Include="AuthorizeModify.cs" />
     <Compile Include="AuthorizeRemove.cs" />
+    <Compile Include="InterpretBeforeModify.cs" />
+    <Compile Include="InterpretBeforeCreate.cs" />
     <Compile Include="Interpret.cs" />
     <Compile Include="Listen.cs" />
     <Compile Include="Loader.cs" />
