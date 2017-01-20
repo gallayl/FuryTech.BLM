@@ -29,6 +29,7 @@ namespace BLM.Interfaces
         Task RemoveAsync(IIdentity usr, TInput item);
         void RemoveRange(IIdentity usr, IEnumerable<TInput> items);
         Task RemoveRangeAsync(IIdentity usr, IEnumerable<TInput> items);
+        IRepository<T2> GetChildRepositoryFor<T2>() where T2: class;
     }
 
 }

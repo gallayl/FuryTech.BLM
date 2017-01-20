@@ -362,5 +362,10 @@ namespace BLM.EF6
         {
             return _dbcontext.Entry(entity).State;
         }
+
+        public IRepository<T2> GetChildRepositoryFor<T2>() where T2 : class
+        {
+            return GetChildRepositoryFor<T2>();
+        }
     }
 }
