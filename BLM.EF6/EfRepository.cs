@@ -365,7 +365,7 @@ namespace BLM.EF6
 
         public IRepository<T2> GetChildRepositoryFor<T2>() where T2 : class
         {
-            return GetChildRepositoryFor<T2>();
+            return (IRepository<T2>)GetChildRepositoryFor(typeof(T2));
         }
     }
 }
