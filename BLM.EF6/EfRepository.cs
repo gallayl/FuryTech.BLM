@@ -10,32 +10,55 @@ using System.Threading.Tasks;
 using BLM.Extensions;
 using BLM.Exceptions;
 using BLM.Attributes;
+using BLM.Interfaces;
 
 namespace BLM.EF6
 {
-    public class EfRepository<T> : IRepository<T> where T : class, new()
+    public class EfRepository<T> : IRepository<T>, IEfRepository where T : class, new()
     {
 
         private readonly DbContext _dbcontext;
         private readonly DbSet<T> _dbset;
         private readonly Type _type;
+        private readonly bool _disposeDbContextOnDispose;
+
+        private readonly Dictionary<string, IEfRepository> _childRepositories = new Dictionary<string, IEfRepository>();
 
         /// <summary>
         /// If there are inherited objets, which have LogicalDeleteAttribue-s on it, we throw an exception
         /// </summary>
         public bool IgnoreLogicalDeleteError { get; set; } = false;
 
-        public EfRepository(DbContext db)
+        public EfRepository(DbContext db, bool disposeDbContextOnDispose = true)
         {
             _dbcontext = db;
             _dbset = db.Set<T>();
             _type = typeof(T);
+            _disposeDbContextOnDispose = disposeDbContextOnDispose;
             // TODO: What about the inherited classes? 
         }
 
         private EfContextInfo GetContextInfo(IIdentity user)
         {
             return new EfContextInfo(user, _dbcontext);
+        }
+
+        private IEfRepository GetChildRepositoryFor(DbEntityEntry entry)
+        {
+            var repoType = entry.Entity.GetType();
+            return GetChildRepositoryFor(repoType);
+        }
+
+        private IEfRepository GetChildRepositoryFor(Type type)
+        {
+            var repoKey = type.FullName;
+            if (_childRepositories.ContainsKey(repoKey))
+            {
+                return _childRepositories[repoKey];
+            }
+            var childRepositoryType = typeof(EfRepository<>).MakeGenericType(type);
+            var childRepo = Activator.CreateInstance(childRepositoryType, _dbcontext, false) as IEfRepository;
+            return childRepo;
         }
 
         #region Static things
@@ -63,7 +86,6 @@ namespace BLM.EF6
 
         private async Task<AuthorizationResult> AuthorizeAddAsync(IIdentity usr, T newEntity)
         {
-            _dbset.Attach(newEntity);
             var authResult = (await Authorize.CreateAsync(newEntity, GetContextInfo(usr))).CreateAggregateResult();
             if (!authResult.HasSucceed)
             {
@@ -81,13 +103,9 @@ namespace BLM.EF6
 
         public async Task AddAsync(IIdentity user, T newItem)
         {
-            var result = await AuthorizeAddAsync(user, newItem);
-
-            if (!result.HasSucceed)
-            {
-                throw new AuthorizationFailedException(result);
-            }
-            _dbset.Add(newItem);
+            await Task.Factory.StartNew(() => {
+                _dbset.Add(newItem);
+            });
         }
 
         public void AddRange(IIdentity user, IEnumerable<T> newItems)
@@ -97,30 +115,22 @@ namespace BLM.EF6
 
         public async Task AddRangeAsync(IIdentity user, IEnumerable<T> newItems)
         {
-            var fails = new List<AuthorizationResult>();
-
-            var newItemlist = newItems.ToList();
-            foreach (var item in newItemlist)
-            {
-                var result = await AuthorizeAddAsync(user, item);
-                if (!result.HasSucceed)
-                {
-                    fails.Add(result);
-                }
-            }
-
-            if (fails.Any())
-            {
-                throw new AuthorizationFailedException(fails.CreateAggregateResult());
-            }
-
-            _dbset.AddRange(newItemlist);
+            await Task.Factory.StartNew(() => {
+                _dbset.AddRange(newItems);
+            });
         }
 
 
         public void Dispose()
         {
-            _dbcontext?.Dispose();
+            foreach (KeyValuePair<string, IEfRepository> childRepo in _childRepositories)
+            {
+                childRepo.Value?.Dispose();
+            }
+            if (_disposeDbContextOnDispose)
+            {
+                _dbcontext?.Dispose();
+            }
         }
 
         public IQueryable<T> Entities(IIdentity user)
@@ -140,12 +150,9 @@ namespace BLM.EF6
 
         public async Task RemoveAsync(IIdentity user, T item)
         {
-            var result = (await Authorize.RemoveAsync(item, GetContextInfo(user))).CreateAggregateResult();
-            if (!result.HasSucceed)
-            {
-                throw new AuthorizationFailedException(result);
-            }
-            _dbset.Remove(item);
+            await Task.Factory.StartNew(() => {
+                _dbset.Remove(item);
+            });
         }
 
         public void RemoveRange(IIdentity usr, IEnumerable<T> items)
@@ -155,24 +162,9 @@ namespace BLM.EF6
 
         public async Task RemoveRangeAsync(IIdentity user, IEnumerable<T> items)
         {
-            var fails = new List<AuthorizationResult>();
-            var entityList = items.ToList();
-            foreach (var entity in entityList)
-            {
-                var result = (await Authorize.RemoveAsync(entity, GetContextInfo(user))).CreateAggregateResult();
-                if (!result.HasSucceed)
-                {
-                    fails.Add(result);
-                }
-            }
-
-            if (fails.Any())
-            {
-                var aggregated = fails.CreateAggregateResult();
-                throw new AuthorizationFailedException(aggregated);
-            }
-
-            _dbset.RemoveRange(entityList);
+            await Task.Factory.StartNew(() => {
+                _dbset.RemoveRange(items);
+            });
         }
 
         private AuthorizationResult AuthorizeEntityChange(IIdentity user, DbEntityEntry ent)
@@ -180,7 +172,7 @@ namespace BLM.EF6
             return AuthorizeEntityChangeAsync(user, ent).Result;
         }
 
-        private async Task<AuthorizationResult> AuthorizeEntityChangeAsync(IIdentity user, DbEntityEntry ent)
+        public async Task<AuthorizationResult> AuthorizeEntityChangeAsync(IIdentity user, DbEntityEntry ent)
         {
 
             if (ent.State == EntityState.Unchanged || ent.State == EntityState.Detached)
@@ -196,8 +188,8 @@ namespace BLM.EF6
                         return (await Authorize.CreateAsync(interpreted, GetContextInfo(user))).CreateAggregateResult();
 
                     case EntityState.Modified:
-                        var original = await CreateWithValuesAsync(casted.OriginalValues);
-                        var modified = await CreateWithValuesAsync(casted.CurrentValues);
+                        var original = CreateWithValues(casted.OriginalValues);
+                        var modified = CreateWithValues(casted.CurrentValues);
                         var modifiedInterpreted = Interpret.BeforeModify(original, modified, GetContextInfo(user));
                         foreach (var field in ent.CurrentValues.PropertyNames)
                         {
@@ -205,21 +197,18 @@ namespace BLM.EF6
                         }
                         return (await Authorize.ModifyAsync(original, modifiedInterpreted, GetContextInfo(user))).CreateAggregateResult();
                     case EntityState.Deleted:
-                        return (await Authorize.RemoveAsync(await CreateWithValuesAsync(casted.OriginalValues, casted.Entity.GetType()), GetContextInfo(user))).CreateAggregateResult();
+                        return (await Authorize.RemoveAsync(CreateWithValues(casted.OriginalValues, casted.Entity.GetType()), GetContextInfo(user))).CreateAggregateResult();
                     default:
                         return AuthorizationResult.Fail("The entity state is invalid", casted.Entity);
                 }
             }
             else
             {
-                return AuthorizationResult.Fail($"Changes for entity type '{ent.Entity.GetType().FullName}' is not supported in a context of a repository with type '{typeof(T).FullName}'", ent.Entity);
+                return await GetChildRepositoryFor(ent).AuthorizeEntityChangeAsync(user, ent);
             }
         }
-        private static async Task<T> CreateWithValuesAsync(DbPropertyValues values, Type type = null)
+        private static T CreateWithValues(DbPropertyValues values, Type type = null)
         {
-            return await Task.Factory.StartNew(() =>
-            {
-
                 if (type == null)
                 {
                     type = typeof(T);
@@ -237,12 +226,8 @@ namespace BLM.EF6
                         property.SetValue(entity, Convert.ChangeType(value, property.PropertyType), null);
                     }
                 }
-
                 return entity;
-            });
         }
-
-
 
         public void SaveChanges(IIdentity user)
         {
@@ -263,35 +248,32 @@ namespace BLM.EF6
                 {
                     if (entityChange.State == EntityState.Modified)
                     {
-                        await Listen.ModificationFailedAsync(await CreateWithValuesAsync(entityChange.OriginalValues), entityChange.Entity as T, GetContextInfo(user));
+                        await Listen.ModificationFailedAsync(CreateWithValues(entityChange.OriginalValues), entityChange.Entity as T, GetContextInfo(user));
                     }
                     else if (entityChange.State == EntityState.Deleted)
                     {
-                        await Listen.RemoveFailedAsync(await CreateWithValuesAsync(entityChange.OriginalValues), contextInfo);
+                        await Listen.RemoveFailedAsync(CreateWithValues(entityChange.OriginalValues), contextInfo);
                     }
                     throw new AuthorizationFailedException(authResult);
                 }
             }
 
             // Added should be updated after saving changes for get the ID of the newly created entity
-            var added = entries.Where(a => a.State == EntityState.Added).Select(a => a.Entity).Cast<T>().ToList();
+            var added = entries.Where(a => a.State == EntityState.Added).Select(a => a.Entity).ToList();
+            var modified = entries.Where(a => a.State == EntityState.Modified).Select(SelectBoth).ToList();
+            var removed = entries.Where(a => a.State == EntityState.Deleted).Select(a => SelectOriginal(a)).ToList();
 
-            var modified =
-                entries.Where(a => a.State == EntityState.Modified).Select(async a => await SelectBothAsync(a)).ToList();
-            var removed =
-                entries.Where(a => a.State == EntityState.Deleted).Select(async a => await SelectOriginalAsync(a)).ToList();
+            //var tasks = new List<Task>(removed);
+            //tasks.AddRange(modified);
 
-            var tasks = new List<Task>(removed);
-            tasks.AddRange(modified);
-
-            await Task.WhenAll(tasks.ToArray());
+            //await Task.WhenAll(tasks.ToArray());
 
             if (removed.Any())
             {
                 if (GetLogicalDeleteProperty(_type) == null)
                 {
                     if (!IgnoreLogicalDeleteError &&
-                        removed.Any(entry => GetLogicalDeleteProperty(entry.Result.GetType()) != null))
+                        removed.Any(entry => GetLogicalDeleteProperty(entry.GetType()) != null))
                     {
                         throw new LogicalSecurityRiskException(
                             $"There are derived types in the deleted entries which have LogicalDeleteAttribute, but the base type does not use logical delete.");
@@ -308,20 +290,44 @@ namespace BLM.EF6
                     });
                 }
             }
-
             await _dbcontext.SaveChangesAsync();
+            await DistributeToListenersAsync(added, contextInfo, modified, removed);
+        }
 
-            tasks.Clear();
+        public async Task DistributeToListenersAsync(List<object> added, EfContextInfo contextInfo, List<Tuple<object, object>> modified, List<object> removed, bool isChildRepository = false)
+        {
 
-            tasks.AddRange(added.Select(async a => await Listen.CreatedAsync(a, contextInfo)));
-            tasks.AddRange(
-                modified.Select(
-                    async a =>
-                        await
-                            Listen.ModifiedAsync((await a).Item1, (await a).Item2, contextInfo)));
-            tasks.AddRange(removed.Select(async a => await Listen.RemovedAsync((await a), contextInfo)));
+            if (!isChildRepository)
+            {
+                List<Type> otherTypes = added.Where(a => !(a is T)).Select(a => a.GetType()).ToList();
+                otherTypes.AddRange(modified.Where(a => !(a.Item1 is T)).Select(a => a.Item1.GetType()));
+                otherTypes.AddRange(removed.Where(a => !(a is T)).Select(a => a.GetType()));
+                foreach (var otherType in otherTypes.Distinct())
+                {
+                    var repo = GetChildRepositoryFor(otherType);
+                    await repo.DistributeToListenersAsync(added, contextInfo, modified, removed, true);
+                }
+            }
 
-            await Task.WhenAll(tasks.ToArray());
+
+            /* from the same type */
+            //added.Where(a=>(a) is T).Cast<T>().Select(async a => await Listen.CreatedAsync(a, contextInfo));
+            foreach (var addedEntry in added.Where(a => (a) is T).Cast<T>())
+            {
+                await Listen.CreatedAsync(addedEntry, contextInfo);
+            }
+            //var t2 = modified.Where(a => a is Tuple<T,T>).Cast<Tuple<T,T>>().Select(async a =>await Listen.ModifiedAsync((a).Item1, (a).Item2, contextInfo));
+            foreach (var modifiedEntry in modified.Where(a => a is Tuple<T, T>).Cast<Tuple<T, T>>())
+            {
+                await Listen.ModifiedAsync(modifiedEntry.Item1, modifiedEntry.Item2, contextInfo);
+            }
+
+            //var t3 = removed.Where(a => a is T).Cast<T>().Select(async a => await Listen.RemovedAsync((a), contextInfo));
+            foreach (var removedEntry in removed.Where(a => a is T).Cast<T>())
+            {
+                await Listen.RemovedAsync(removedEntry, contextInfo);
+            }
+
         }
 
         public void SetEntityState(T entity, EntityState newState)
@@ -329,32 +335,37 @@ namespace BLM.EF6
             _dbcontext.Entry(entity).State = newState;
         }
 
-        private static async Task<T> SelectCurrentAsync(DbEntityEntry a, Type type = null)
+        private static T SelectCurrent(DbEntityEntry a, Type type = null)
         {
             if (type == null)
             {
                 type = a.Entity.GetType();
             }
-            return await CreateWithValuesAsync(a.CurrentValues.Clone(), type);
+            return CreateWithValues(a.CurrentValues.Clone(), type);
         }
-        private static async Task<T> SelectOriginalAsync(DbEntityEntry a, Type type = null)
+        private static object SelectOriginal(DbEntityEntry a, Type type = null)
         {
             if (type == null)
             {
                 type = a.Entity.GetType();
             }
-            return await CreateWithValuesAsync(a.OriginalValues.Clone(), type);
+            return CreateWithValues(a.OriginalValues.Clone(), type);
         }
 
-        private static async Task<Tuple<T, T >> SelectBothAsync(DbEntityEntry a)
+        private static Tuple<object, object> SelectBoth(DbEntityEntry a)
         {
             var type = a.Entity.GetType();
-            return (new Tuple<T, T>(await SelectOriginalAsync(a, type), await SelectCurrentAsync(a, type)));
+            return (new Tuple<object, object>(SelectOriginal(a, type), SelectCurrent(a, type)));
         }
 
         public EntityState GetEntityState(T entity)
         {
             return _dbcontext.Entry(entity).State;
+        }
+
+        public IRepository<T2> GetChildRepositoryFor<T2>() where T2 : class
+        {
+            return (IRepository<T2>)GetChildRepositoryFor(typeof(T2));
         }
     }
 }

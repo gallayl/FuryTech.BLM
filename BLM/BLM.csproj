@@ -52,6 +52,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AuthorizeCRUD.cs" />
     <Compile Include="Exceptions\BLMException.cs" />
     <Compile Include="Exceptions\LogicalSecurityRiskException.cs" />
     <Compile Include="Extensions\AuthoriaztionResultExtension.cs" />
@@ -59,6 +60,12 @@
     <Compile Include="AuthorizationResult.cs" />
     <Compile Include="Authorize.cs" />
     <Compile Include="GenericContextInfo.cs" />
+    <Compile Include="AuthorizeCollection.cs" />
+    <Compile Include="AuthorizeCreate.cs" />
+    <Compile Include="AuthorizeModify.cs" />
+    <Compile Include="AuthorizeRemove.cs" />
+    <Compile Include="InterpretBeforeModify.cs" />
+    <Compile Include="InterpretBeforeCreate.cs" />
     <Compile Include="Interpret.cs" />
     <Compile Include="Listen.cs" />
     <Compile Include="Loader.cs" />

@@ -2,7 +2,7 @@
 using System.Security.Principal;
 using System.Threading.Tasks;
 
-namespace BLM
+namespace BLM.Interfaces
 {
     public interface IContextInfo
     {

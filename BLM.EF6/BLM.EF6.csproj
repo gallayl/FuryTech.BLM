@@ -60,6 +60,7 @@
   <ItemGroup>
     <Compile Include="EfContextInfo.cs" />
     <Compile Include="EfRepository.cs" />
+    <Compile Include="IEfRepository.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

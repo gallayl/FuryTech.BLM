@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using BLM.Interfaces;
 using BLM.Interfaces.Interpret;
 
 namespace BLM

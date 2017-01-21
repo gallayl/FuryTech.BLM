@@ -2,7 +2,7 @@
 
 namespace BLM.Interfaces.Authorize
 {
-    public interface IAuthorizeCreate<in T> : IBlmEntry
+    internal interface IAuthorizeCreate<in T> : IBlmEntry
     {
         /// <summary>
         /// Authorizes an Insert operation

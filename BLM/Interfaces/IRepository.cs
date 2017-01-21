@@ -4,15 +4,21 @@ using System.Linq;
 using System.Security.Principal;
 using System.Threading.Tasks;
 
-namespace BLM
+namespace BLM.Interfaces
 {
+
+    public interface IRepository
+    {
+        void SaveChanges(IIdentity user);
+        Task SaveChangesAsync(IIdentity user);
+    }
 
     public interface IRepository<T> : IRepository<T, T> where T : class
     {
 
     }
 
-    public interface IRepository<in TInput, out TOutput> : IDisposable where TInput : class where TOutput: class
+    public interface IRepository<in TInput, out TOutput> : IDisposable, IRepository where TInput : class where TOutput: class
     {
         IQueryable<TOutput> Entities(IIdentity user);
         void Add(IIdentity user, TInput newItem);
@@ -23,8 +29,7 @@ namespace BLM
         Task RemoveAsync(IIdentity usr, TInput item);
         void RemoveRange(IIdentity usr, IEnumerable<TInput> items);
         Task RemoveRangeAsync(IIdentity usr, IEnumerable<TInput> items);
-        void SaveChanges(IIdentity user);
-        Task SaveChangesAsync(IIdentity user);
+        IRepository<T2> GetChildRepositoryFor<T2>() where T2: class;
     }
 
 }

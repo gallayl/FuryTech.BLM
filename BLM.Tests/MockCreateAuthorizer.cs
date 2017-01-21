@@ -1,11 +1,12 @@
-﻿using BLM.Interfaces.Authorize;
+﻿using BLM;
 using System.Threading.Tasks;
+using BLM.Interfaces;
 
 namespace BLM.Tests
 {
-    public class MockCreateAuthorizer : IAuthorizeCreate<MockEntity> {
+    public class MockCreateAuthorizer : AuthorizeCreate<MockEntity> {
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        public async Task<AuthorizationResult> CanCreateAsync(MockEntity entity, IContextInfo ctx)
+        public override async Task<AuthorizationResult> CanCreateAsync(MockEntity entity, IContextInfo ctx)
         {
             if (entity.IsValid)
             {

@@ -2,7 +2,7 @@
 
 namespace BLM.Interfaces.Authorize
 {
-    public interface IAuthorizeModify<in T> : IBlmEntry
+    internal interface IAuthorizeModify<in T> : IBlmEntry
     {
         /// <summary>
         /// Authorizes an update / modify operation

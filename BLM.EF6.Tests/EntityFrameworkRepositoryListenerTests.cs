@@ -1,14 +1,6 @@
-﻿using System;
-using System.Text;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Principal;
-using System.Threading;
+﻿using System.Linq;
 using System.Threading.Tasks;
-using System.Transactions;
-using BLM.Interfaces.Listen;
 using BLM.Tests;
-using Effort.Provider;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace BLM.EF6.Tests
@@ -17,7 +9,7 @@ namespace BLM.EF6.Tests
     /// Summary description for ListenerTests
     /// </summary>
     [TestClass]
-    public class EntityFrameworkRepositoryListenerTests : AbstractEfRepositoryTest
+    public class RepositoryListenerTests : AbstractEfRepositoryTest
     {
         [TestCleanup]
         public override void Cleanup()
@@ -90,63 +82,28 @@ namespace BLM.EF6.Tests
         [TestMethod]
         public async Task LogicalDelete()
         {
-            EfRepository<LogicalDeleteEntity> localRepository = new EfRepository<LogicalDeleteEntity>(_db);
+            using (EfRepository<LogicalDeleteEntity> localRepository = new EfRepository<LogicalDeleteEntity>(_db))
+            {
+                await localRepository.AddAsync(_identity, Entity2);
+                await localRepository.AddAsync(_identity, Entity3);
+                await localRepository.SaveChangesAsync(_identity);
 
-            await localRepository.AddAsync(_identity, Entity2);
-            await localRepository.AddAsync(_identity, Entity3);
-            await localRepository.SaveChangesAsync(_identity);
+                Assert.AreEqual(2, EfChangeListener.CreatedEntities.Count);
+                Assert.AreEqual(2, (await localRepository.EntitiesAsync(_identity)).Count());
 
-            Assert.AreEqual(2, EfChangeListener.CreatedEntities.Count);
-            Assert.AreEqual(2, (await localRepository.EntitiesAsync(_identity)).Count());
+                await localRepository.RemoveAsync(_identity, Entity2);
+                await localRepository.SaveChangesAsync(_identity);
 
-            await localRepository.RemoveAsync(_identity, Entity2);
-            await localRepository.SaveChangesAsync(_identity);
-
-            Assert.AreEqual(2, (await localRepository.EntitiesAsync(_identity)).Count());
-            var entities = (await localRepository.EntitiesAsync(_identity)).ToArray();
-            Assert.AreEqual(1, (await localRepository.EntitiesAsync(_identity)).Count(entity => entity.IsDeleted && entity.Id == 1));
-            Assert.AreEqual(1, (await localRepository.EntitiesAsync(_identity)).Count(entity => !entity.IsDeleted && entity.Id == 2));
-            Assert.AreEqual(1, EfChangeListener.RemovedEntities.Count);
-            Assert.AreEqual(0, EfChangeListener.ModifiedNewEntities.Count);
-            Assert.AreEqual(0, EfChangeListener.ModifiedOriginalEntities.Count);
-            // The LogicalDeleting mock entity should just modified
-            Assert.AreEqual(false, EfChangeListener.WasOnModifiedCalled);
-        }
-    }
-
-    class EfChangeListener : Listener<MockEntity>
-    {
-        public static List<MockEntity> CreatedEntities { get; set; }
-        public static List<MockEntity> ModifiedOriginalEntities { get; set; }
-        public static List<MockEntity> ModifiedNewEntities { get; set; }
-        public static List<MockEntity> RemovedEntities { get; set; }
-
-        public new static void Reset()
-        {
-            CreatedEntities = new List<MockEntity>();
-            ModifiedNewEntities = new List<MockEntity>();
-            ModifiedOriginalEntities = new List<MockEntity>();
-            RemovedEntities = new List<MockEntity>();
-            Listener<MockEntity>.Reset();
-        }
-
-        public override async Task OnCreatedAsync(MockEntity entity, IContextInfo context)
-        {
-            await base.OnCreatedAsync(entity, context);
-            CreatedEntities.Add(entity);
-        }
-
-        public override async Task OnModifiedAsync(MockEntity originalEntity, MockEntity modifiedEntity, IContextInfo context)
-        {
-            await base.OnModifiedAsync(originalEntity, modifiedEntity, context);
-            ModifiedOriginalEntities.Add(originalEntity);
-            ModifiedNewEntities.Add(modifiedEntity);
-        }
-
-        public override async Task OnRemovedAsync(MockEntity entity, IContextInfo context)
-        {
-            await base.OnRemovedAsync(entity, context);
-            RemovedEntities.Add(entity);
+                Assert.AreEqual(2, (await localRepository.EntitiesAsync(_identity)).Count());
+                var entities = (await localRepository.EntitiesAsync(_identity)).ToArray();
+                Assert.AreEqual(1, (await localRepository.EntitiesAsync(_identity)).Count(entity => entity.IsDeleted && entity.Id == 1));
+                Assert.AreEqual(1, (await localRepository.EntitiesAsync(_identity)).Count(entity => !entity.IsDeleted && entity.Id == 2));
+                Assert.AreEqual(1, EfChangeListener.RemovedEntities.Count);
+                Assert.AreEqual(0, EfChangeListener.ModifiedNewEntities.Count);
+                Assert.AreEqual(0, EfChangeListener.ModifiedOriginalEntities.Count);
+                // The LogicalDeleting mock entity should just modified
+                Assert.AreEqual(false, EfChangeListener.WasOnModifiedCalled);
+            }
         }
     }
 }

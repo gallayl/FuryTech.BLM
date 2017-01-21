@@ -16,6 +16,8 @@ namespace BLM.EF6.Tests
     {
         protected FakeDbContext _db;
         protected EfRepository<MockEntity> _repo;
+        protected EfRepository<MockNestedEntity> _repoNested;
+        protected EfRepository<MockInterpretedEntity> _repoInterpreted;
         protected IIdentity _identity;
 
         [TestInitialize]
@@ -25,6 +27,8 @@ namespace BLM.EF6.Tests
             var efforConnection = Effort.DbConnectionFactory.CreateTransient();
             _db = new FakeDbContext(efforConnection);
             _repo = new EfRepository<MockEntity>(_db);
+            _repoNested = new EfRepository<MockNestedEntity>(_db);
+            _repoInterpreted = new EfRepository<MockInterpretedEntity>(_db);
             _identity = Thread.CurrentPrincipal.Identity;
 
             EfChangeListener.Reset();
