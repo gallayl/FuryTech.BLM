@@ -223,7 +223,8 @@ namespace BLM.EF6
 
                     if (value != null)
                     {
-                        property.SetValue(entity, Convert.ChangeType(value, property.PropertyType), null);
+                        var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+                        property.SetValue(entity, Convert.ChangeType(value, propertyType), null);
                     }
                 }
                 return entity;
