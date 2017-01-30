@@ -283,9 +283,9 @@ namespace BLM.EF6
                 else
                 {
                     var logicalRemoved = entries.Where(a => a.State == EntityState.Deleted).ToList();
-                    logicalRemoved.ForEach(entry =>
+                    logicalRemoved.ForEach(async entry =>
                     {
-                        //await entry.ReloadAsync();
+                        await entry.ReloadAsync();
                         entry.State = EntityState.Modified;
                         entry.Property(GetLogicalDeleteProperty(_type).Name).CurrentValue = true;
                     });
