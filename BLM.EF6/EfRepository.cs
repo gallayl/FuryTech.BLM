@@ -209,25 +209,25 @@ namespace BLM.EF6
         }
         private static T CreateWithValues(DbPropertyValues values, Type type = null)
         {
-                if (type == null)
+            if (type == null)
+            {
+                type = typeof(T);
+            }
+
+            T entity = (T)Activator.CreateInstance(type);
+
+            foreach (string name in values.PropertyNames)
+            {
+                var value = values.GetValue<object>(name);
+                var property = type.GetProperty(name);
+
+                if (value != null)
                 {
-                    type = typeof(T);
+                    var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+                    property.SetValue(entity, Convert.ChangeType(value, propertyType), null);
                 }
-
-                T entity = (T)Activator.CreateInstance(type);
-
-                foreach (string name in values.PropertyNames)
-                {
-                    var value = values.GetValue<object>(name);
-                    var property = type.GetProperty(name);
-
-                    if (value != null)
-                    {
-                        var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
-                        property.SetValue(entity, Convert.ChangeType(value, propertyType), null);
-                    }
-                }
-                return entity;
+            }
+            return entity;
         }
 
         public void SaveChanges(IIdentity user)
@@ -318,9 +318,9 @@ namespace BLM.EF6
                 await Listen.CreatedAsync(addedEntry, contextInfo);
             }
             //var t2 = modified.Where(a => a is Tuple<T,T>).Cast<Tuple<T,T>>().Select(async a =>await Listen.ModifiedAsync((a).Item1, (a).Item2, contextInfo));
-            foreach (var modifiedEntry in modified.Where(a => a is Tuple<T, T>).Cast<Tuple<T, T>>())
+            foreach (var modifiedEntry in modified.Where(a => a.Item1 is T && a.Item2 is T).Cast<Tuple<object, object>>())
             {
-                await Listen.ModifiedAsync(modifiedEntry.Item1, modifiedEntry.Item2, contextInfo);
+                await Listen.ModifiedAsync(modifiedEntry.Item1 as T, modifiedEntry.Item2 as T, contextInfo);
             }
 
             //var t3 = removed.Where(a => a is T).Cast<T>().Select(async a => await Listen.RemovedAsync((a), contextInfo));
