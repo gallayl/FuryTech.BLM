@@ -103,7 +103,8 @@ namespace BLM.EF6
 
         public async Task AddAsync(IIdentity user, T newItem)
         {
-            await Task.Factory.StartNew(() => {
+            await Task.Factory.StartNew(() =>
+            {
                 _dbset.Add(newItem);
             });
         }
@@ -115,7 +116,8 @@ namespace BLM.EF6
 
         public async Task AddRangeAsync(IIdentity user, IEnumerable<T> newItems)
         {
-            await Task.Factory.StartNew(() => {
+            await Task.Factory.StartNew(() =>
+            {
                 _dbset.AddRange(newItems);
             });
         }
@@ -150,7 +152,8 @@ namespace BLM.EF6
 
         public async Task RemoveAsync(IIdentity user, T item)
         {
-            await Task.Factory.StartNew(() => {
+            await Task.Factory.StartNew(() =>
+            {
                 _dbset.Remove(item);
             });
         }
@@ -162,7 +165,8 @@ namespace BLM.EF6
 
         public async Task RemoveRangeAsync(IIdentity user, IEnumerable<T> items)
         {
-            await Task.Factory.StartNew(() => {
+            await Task.Factory.StartNew(() =>
+            {
                 _dbset.RemoveRange(items);
             });
         }
@@ -195,9 +199,9 @@ namespace BLM.EF6
                         {
                             ent.CurrentValues[field] = modifiedInterpreted.GetType().GetProperty(field).GetValue(modifiedInterpreted, null);
                         }
-                        return (await Authorize.ModifyAsync(original, modifiedInterpreted, GetContextInfo(user))).CreateAggregateResult();
+                        return (await Authorize.ModifyAsync((T)original, (T)modifiedInterpreted, GetContextInfo(user))).CreateAggregateResult();
                     case EntityState.Deleted:
-                        return (await Authorize.RemoveAsync(CreateWithValues(casted.OriginalValues, casted.Entity.GetType()), GetContextInfo(user))).CreateAggregateResult();
+                        return (await Authorize.RemoveAsync((T)CreateWithValues(casted.OriginalValues, casted.Entity.GetType()), GetContextInfo(user))).CreateAggregateResult();
                     default:
                         return AuthorizationResult.Fail("The entity state is invalid", casted.Entity);
                 }
@@ -207,14 +211,15 @@ namespace BLM.EF6
                 return await GetChildRepositoryFor(ent).AuthorizeEntityChangeAsync(user, ent);
             }
         }
-        private static T CreateWithValues(DbPropertyValues values, Type type = null)
+
+        private static object CreateWithValues(DbPropertyValues values, Type type = null)
         {
             if (type == null)
             {
                 type = typeof(T);
             }
 
-            T entity = (T)Activator.CreateInstance(type);
+            var entity = Activator.CreateInstance(type);
 
             foreach (string name in values.PropertyNames)
             {
@@ -263,11 +268,6 @@ namespace BLM.EF6
             var added = entries.Where(a => a.State == EntityState.Added).Select(a => a.Entity).ToList();
             var modified = entries.Where(a => a.State == EntityState.Modified).Select(SelectBoth).ToList();
             var removed = entries.Where(a => a.State == EntityState.Deleted).Select(a => SelectOriginal(a)).ToList();
-
-            //var tasks = new List<Task>(removed);
-            //tasks.AddRange(modified);
-
-            //await Task.WhenAll(tasks.ToArray());
 
             if (removed.Any())
             {
@@ -336,7 +336,7 @@ namespace BLM.EF6
             _dbcontext.Entry(entity).State = newState;
         }
 
-        private static T SelectCurrent(DbEntityEntry a, Type type = null)
+        private static object SelectCurrent(DbEntityEntry a, Type type = null)
         {
             if (type == null)
             {
