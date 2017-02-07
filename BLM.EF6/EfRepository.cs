@@ -194,7 +194,7 @@ namespace BLM.EF6
                     case EntityState.Modified:
                         var original = CreateWithValues(casted.OriginalValues);
                         var modified = CreateWithValues(casted.CurrentValues);
-                        var modifiedInterpreted = Interpret.BeforeModify(original, modified, GetContextInfo(user));
+                        var modifiedInterpreted = Interpret.BeforeModify((T)original, (T)modified, GetContextInfo(user));
                         foreach (var field in ent.CurrentValues.PropertyNames)
                         {
                             ent.CurrentValues[field] = modifiedInterpreted.GetType().GetProperty(field).GetValue(modifiedInterpreted, null);
