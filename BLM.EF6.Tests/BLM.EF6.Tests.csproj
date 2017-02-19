@@ -60,10 +60,6 @@
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
-    <Reference Include="System.Runtime.Caching.Generic, Version=1.0.5.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Runtime.Caching.Generic.1.0.5.0\lib\net40\System.Runtime.Caching.Generic.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System.Transactions" />
   </ItemGroup>
   <ItemGroup>
