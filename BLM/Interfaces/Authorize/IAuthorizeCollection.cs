@@ -14,7 +14,7 @@ namespace BLM.Interfaces.Authorize
         Task<IQueryable> AuthorizeCollectionAsync(IQueryable entities, IContextInfo ctx);
     }
 
-    internal interface IAuthorizeCollection<in TInput, TOutput> : IAuthorizeCollection
+    internal interface IAuthorizeCollection<in TInput, TOutput> : IAuthorizeCollection where TInput : class where TOutput : class
     {
         /// <summary>
         /// Authorizes a collection to be read
