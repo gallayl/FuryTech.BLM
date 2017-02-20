@@ -11,7 +11,7 @@ namespace BLM.EF6.Tests
     [TestClass]
     public class ReferenceInsertTests : AbstractEfRepositoryTest
     {
-        
+
 
         protected MockEntity ValidEntity = new MockEntity()
         {
@@ -52,7 +52,7 @@ namespace BLM.EF6.Tests
         {
             await _repoNested.AddAsync(_identity, new MockNestedEntity()
             {
-                MockEntities = new List<MockEntity>{ ValidEntity }
+                MockEntities = new List<MockEntity> { ValidEntity }
             });
             await _repoNested.SaveChangesAsync(_identity);
         }
@@ -95,7 +95,7 @@ namespace BLM.EF6.Tests
         {
             await _repoNested.AddAsync(_identity, new MockNestedEntity()
             {
-                MockEntities = new List<MockEntity> { new MockEntity {IsValid = true} }
+                MockEntities = new List<MockEntity> { new MockEntity { IsValid = true } }
             });
             await _repoNested.SaveChangesAsync(_identity);
         }
@@ -132,11 +132,39 @@ namespace BLM.EF6.Tests
         }
 
         [TestMethod]
+        public async Task ModifyOneDeepInsertTest()
+        {
+            await _repoNested.AddAsync(_identity, new MockNestedEntity()
+            {
+                Id = 1,
+                MockEntities = new List<MockEntity>
+                {
+                    new MockEntity
+                    {
+                        IsValid = true,
+                        Id = 3,
+                        IsVisible = true,
+                        IsVisible2 = true
+                    }
+                }
+            });
+            await _repoNested.SaveChangesAsync(_identity);
+
+            var first = _repo.Entities(_identity).First();
+
+            first.Guid = Guid.NewGuid().ToString();
+            await _repoNested.SaveChangesAsync(_identity);
+        }
+
+        [TestMethod]
         public async Task AddOneValidAndOneInvalidDeepInsert()
         {
             await _repoNested.AddAsync(_identity, new MockNestedEntity()
             {
-                MockEntities = new List<MockEntity> { new MockEntity { IsValid = true }, new MockEntity { IsValid = false } }
+                MockEntities = new List<MockEntity>
+                {
+                    new MockEntity { IsValid = true }, new MockEntity { IsValid = false }
+                }
             });
 
             try

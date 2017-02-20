@@ -5,7 +5,7 @@ using BLM.Interfaces.Authorize;
 
 namespace BLM
 {
-    public abstract class AuthorizeCollection<T> : IAuthorizeCollection<T, T>
+    public abstract class AuthorizeCollection<T> : IAuthorizeCollection<T, T> where T : class
     {
         /// <summary>
         /// Authorizes a collection to be read
