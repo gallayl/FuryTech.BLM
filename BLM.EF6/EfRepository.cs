@@ -103,7 +103,8 @@ namespace BLM.EF6
 
         public async Task AddAsync(IIdentity user, T newItem)
         {
-            await Task.Factory.StartNew(() => {
+            await Task.Factory.StartNew(() =>
+            {
                 _dbset.Add(newItem);
             });
         }
@@ -115,7 +116,8 @@ namespace BLM.EF6
 
         public async Task AddRangeAsync(IIdentity user, IEnumerable<T> newItems)
         {
-            await Task.Factory.StartNew(() => {
+            await Task.Factory.StartNew(() =>
+            {
                 _dbset.AddRange(newItems);
             });
         }
@@ -150,7 +152,8 @@ namespace BLM.EF6
 
         public async Task RemoveAsync(IIdentity user, T item)
         {
-            await Task.Factory.StartNew(() => {
+            await Task.Factory.StartNew(() =>
+            {
                 _dbset.Remove(item);
             });
         }
@@ -162,7 +165,8 @@ namespace BLM.EF6
 
         public async Task RemoveRangeAsync(IIdentity user, IEnumerable<T> items)
         {
-            await Task.Factory.StartNew(() => {
+            await Task.Factory.StartNew(() =>
+            {
                 _dbset.RemoveRange(items);
             });
         }
@@ -190,14 +194,14 @@ namespace BLM.EF6
                     case EntityState.Modified:
                         var original = CreateWithValues(casted.OriginalValues);
                         var modified = CreateWithValues(casted.CurrentValues);
-                        var modifiedInterpreted = Interpret.BeforeModify(original, modified, GetContextInfo(user));
+                        var modifiedInterpreted = Interpret.BeforeModify((T)original, (T)modified, GetContextInfo(user));
                         foreach (var field in ent.CurrentValues.PropertyNames)
                         {
                             ent.CurrentValues[field] = modifiedInterpreted.GetType().GetProperty(field).GetValue(modifiedInterpreted, null);
                         }
-                        return (await Authorize.ModifyAsync(original, modifiedInterpreted, GetContextInfo(user))).CreateAggregateResult();
+                        return (await Authorize.ModifyAsync((T)original, (T)modifiedInterpreted, GetContextInfo(user))).CreateAggregateResult();
                     case EntityState.Deleted:
-                        return (await Authorize.RemoveAsync(CreateWithValues(casted.OriginalValues, casted.Entity.GetType()), GetContextInfo(user))).CreateAggregateResult();
+                        return (await Authorize.RemoveAsync((T)CreateWithValues(casted.OriginalValues, casted.Entity.GetType()), GetContextInfo(user))).CreateAggregateResult();
                     default:
                         return AuthorizationResult.Fail("The entity state is invalid", casted.Entity);
                 }
@@ -207,27 +211,28 @@ namespace BLM.EF6
                 return await GetChildRepositoryFor(ent).AuthorizeEntityChangeAsync(user, ent);
             }
         }
-        private static T CreateWithValues(DbPropertyValues values, Type type = null)
+
+        private static object CreateWithValues(DbPropertyValues values, Type type = null)
         {
-                if (type == null)
+            if (type == null)
+            {
+                type = typeof(T);
+            }
+
+            var entity = Activator.CreateInstance(type);
+
+            foreach (string name in values.PropertyNames)
+            {
+                var value = values.GetValue<object>(name);
+                var property = type.GetProperty(name);
+
+                if (value != null)
                 {
-                    type = typeof(T);
+                    var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+                    property.SetValue(entity, Convert.ChangeType(value, propertyType), null);
                 }
-
-                T entity = (T)Activator.CreateInstance(type);
-
-                foreach (string name in values.PropertyNames)
-                {
-                    var value = values.GetValue<object>(name);
-                    var property = type.GetProperty(name);
-
-                    if (value != null)
-                    {
-                        var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
-                        property.SetValue(entity, Convert.ChangeType(value, propertyType), null);
-                    }
-                }
-                return entity;
+            }
+            return entity;
         }
 
         public void SaveChanges(IIdentity user)
@@ -264,11 +269,6 @@ namespace BLM.EF6
             var modified = entries.Where(a => a.State == EntityState.Modified).Select(SelectBoth).ToList();
             var removed = entries.Where(a => a.State == EntityState.Deleted).Select(a => SelectOriginal(a)).ToList();
 
-            //var tasks = new List<Task>(removed);
-            //tasks.AddRange(modified);
-
-            //await Task.WhenAll(tasks.ToArray());
-
             if (removed.Any())
             {
                 if (GetLogicalDeleteProperty(_type) == null)
@@ -285,7 +285,7 @@ namespace BLM.EF6
                     var logicalRemoved = entries.Where(a => a.State == EntityState.Deleted).ToList();
                     logicalRemoved.ForEach(entry =>
                     {
-                        //await entry.ReloadAsync();
+                        entry.Reload();
                         entry.State = EntityState.Modified;
                         entry.Property(GetLogicalDeleteProperty(_type).Name).CurrentValue = true;
                     });
@@ -318,9 +318,9 @@ namespace BLM.EF6
                 await Listen.CreatedAsync(addedEntry, contextInfo);
             }
             //var t2 = modified.Where(a => a is Tuple<T,T>).Cast<Tuple<T,T>>().Select(async a =>await Listen.ModifiedAsync((a).Item1, (a).Item2, contextInfo));
-            foreach (var modifiedEntry in modified.Where(a => a is Tuple<T, T>).Cast<Tuple<T, T>>())
+            foreach (var modifiedEntry in modified.Where(a => a.Item1 is T && a.Item2 is T).Cast<Tuple<object, object>>())
             {
-                await Listen.ModifiedAsync(modifiedEntry.Item1, modifiedEntry.Item2, contextInfo);
+                await Listen.ModifiedAsync(modifiedEntry.Item1 as T, modifiedEntry.Item2 as T, contextInfo);
             }
 
             //var t3 = removed.Where(a => a is T).Cast<T>().Select(async a => await Listen.RemovedAsync((a), contextInfo));
@@ -336,7 +336,7 @@ namespace BLM.EF6
             _dbcontext.Entry(entity).State = newState;
         }
 
-        private static T SelectCurrent(DbEntityEntry a, Type type = null)
+        private static object SelectCurrent(DbEntityEntry a, Type type = null)
         {
             if (type == null)
             {
