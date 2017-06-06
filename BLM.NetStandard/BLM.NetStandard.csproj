@@ -6,7 +6,7 @@
     <PackageId>FuryTechs.BLM.NetStandard</PackageId>
     <Authors>FuryTechs.BLM.NetStandard</Authors>
     <Company>FuryTechs</Company>
-    <Description>FuryTechs Business Layer Management tools for .NET Standard 1.6</Description>
+    <Description>FuryTechs Business Layer Management tools for .NET Standard 1.5</Description>
     <Product>FuryTechs.BLM.NetStandard</Product>
     <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
   </PropertyGroup>
