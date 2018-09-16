@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace BLM.NetStandard.Exceptions
+﻿namespace BLM.NetStandard.Exceptions
 {
     public class AuthorizationFailedException : BLMException
     {
