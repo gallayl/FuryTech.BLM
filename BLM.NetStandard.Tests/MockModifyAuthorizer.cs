@@ -1,5 +1,4 @@
-﻿using BLM.NetStandard.Interfaces.Authorize;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using BLM.NetStandard.Interfaces;
 
 namespace BLM.NetStandard.Tests

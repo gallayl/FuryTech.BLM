@@ -1,9 +1,7 @@
 using System;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using BLM.NetStandard.Interfaces;
-using BLM.NetStandard.Interfaces.Authorize;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace BLM.NetStandard.Tests

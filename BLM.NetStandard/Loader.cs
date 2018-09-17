@@ -42,7 +42,6 @@ namespace BLM.NetStandard
         {
             lock (_loadingTypes)
             {
-                var x = System.Runtime.Loader.AssemblyLoadContext.Default;
                 var assemblies = AppDomain.CurrentDomain.GetAssemblies().ToList();
                 _loadedTypes = new List<Type>();
                 foreach (var assembly in assemblies)
@@ -61,13 +60,6 @@ namespace BLM.NetStandard
                 }
             }
         }
-
-        //private static void CurrentDomain_AssemblyLoad(object sender, object args)
-        //{
-        //    _loadedTypes = null;
-        //    LoadTypes();
-        //}
-
 
         private static readonly Dictionary<string, IBlmEntry> BlmInstances = new Dictionary<string, IBlmEntry>();
 

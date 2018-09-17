@@ -1,6 +1,5 @@
 using System.Linq;
 using System.Threading.Tasks;
-using BLM.NetStandard.Interfaces.Authorize;
 using BLM.NetStandard.Interfaces;
 
 namespace BLM.NetStandard.Tests
