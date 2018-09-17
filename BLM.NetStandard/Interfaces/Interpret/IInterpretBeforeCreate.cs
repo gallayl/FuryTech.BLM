@@ -1,6 +1,4 @@
-﻿using System.Security.Principal;
-
-namespace BLM.NetStandard.Interfaces.Interpret
+﻿namespace BLM.NetStandard.Interfaces.Interpret
 {
     internal interface IInterpretBeforeCreate : IBlmEntry
     {
