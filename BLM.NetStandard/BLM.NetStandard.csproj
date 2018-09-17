@@ -9,6 +9,7 @@
     <Description>FuryTechs Business Layer Management tools for .NET Standard 1.5</Description>
     <Product>FuryTechs.BLM.NetStandard</Product>
     <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
+    <Version>2.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
