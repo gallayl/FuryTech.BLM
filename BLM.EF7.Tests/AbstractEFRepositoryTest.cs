@@ -59,6 +59,22 @@ namespace BLM.EF7.Tests
                 IsVisible = true,
                 IsVisible2 = true
             };
+
+            Entity4 = new InheritedLogicalDeleteEntity()
+            {
+                Id = 2,
+                IsValid = true,
+                IsVisible = true,
+                IsVisible2 = true
+            };
+
+            Entity5 = new InheritedLogicalDeleteEntity()
+            {
+                Id = 3,
+                IsValid = true,
+                IsVisible = true,
+                IsVisible2 = true
+            };
         }
 
         [TestCleanup]
@@ -71,5 +87,8 @@ namespace BLM.EF7.Tests
         protected MockEntity Entity1 { get; set; }
         protected LogicalDeleteEntity Entity2 { get; set; }
         protected LogicalDeleteEntity Entity3 { get; set; }
+
+        protected InheritedLogicalDeleteEntity Entity4 { get; set; }
+        protected InheritedLogicalDeleteEntity Entity5 { get; set; }
     }
 }
