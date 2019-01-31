@@ -1,23 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Security.Principal;
-using System.Threading.Tasks;
-using BLM.NetStandard;
+﻿using BLM.NetStandard;
 using BLM.NetStandard.Attributes;
 using BLM.NetStandard.Exceptions;
 using BLM.NetStandard.Extensions;
 using BLM.NetStandard.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
+using System.Security.Principal;
+using System.Threading.Tasks;
 
 namespace BLM.EF7
 {
     public class EfRepository<T> : IRepository<T>, IEfRepository where T : class, new()
     {
-
         private readonly DbContext _dbcontext;
         private readonly DbSet<T> _dbset;
         private readonly Type _type;
@@ -57,12 +56,14 @@ namespace BLM.EF7
             {
                 return _childRepositories[repoKey];
             }
+
             var childRepositoryType = typeof(EfRepository<>).MakeGenericType(type);
-            var childRepo = (IEfRepository)Activator.CreateInstance(childRepositoryType, _dbcontext, false);
+            var childRepo = (IEfRepository) Activator.CreateInstance(childRepositoryType, _dbcontext, false);
             return childRepo;
         }
 
         #region Static things
+
         /// <summary>
         /// Check the given type if it has an LogicalDeleteAttribute on any property, and returns with the first property it founds (or null)
         /// </summary>
@@ -70,10 +71,23 @@ namespace BLM.EF7
         /// <returns></returns>
         public static PropertyInfo GetLogicalDeleteProperty(Type type)
         {
-            if (!LogicalDeleteCache.ContainsKey(type.FullName))
+            if (!LogicalDeleteCache.ContainsKey(type.FullName ?? throw new InvalidOperationException()))
             {
-                LogicalDeleteCache.Add(type.FullName, type.GetProperties().FirstOrDefault(x => x.GetCustomAttributes<LogicalDeleteAttribute>().Any()));
+                var logicalDeleteProperty = type.GetProperties()
+                    .FirstOrDefault(x => x.GetCustomAttributes<LogicalDeleteAttribute>().Any());
+                if (logicalDeleteProperty == null)
+                {
+                    logicalDeleteProperty =
+                        type.GetInterfaces()
+                            .Select(x =>
+                                x.GetProperties().FirstOrDefault(y =>
+                                    y.GetCustomAttributes<LogicalDeleteAttribute>().Any()))
+                            ?.FirstOrDefault(x => x != null);
+                }
+
+                LogicalDeleteCache.Add(type.FullName, logicalDeleteProperty);
             }
+
             return LogicalDeleteCache[type.FullName];
         }
 
@@ -83,6 +97,7 @@ namespace BLM.EF7
         {
             LogicalDeleteCache = new Dictionary<string, PropertyInfo>();
         }
+
         #endregion
 
         private async Task<AuthorizationResult> AuthorizeAddAsync(IIdentity usr, T newEntity)
@@ -104,10 +119,7 @@ namespace BLM.EF7
 
         public async Task AddAsync(IIdentity user, T newItem)
         {
-            await Task.Factory.StartNew(() =>
-            {
-                _dbset.Add(newItem);
-            });
+            await Task.Factory.StartNew(() => { _dbset.Add(newItem); });
         }
 
         public void AddRange(IIdentity user, IEnumerable<T> newItems)
@@ -117,19 +129,17 @@ namespace BLM.EF7
 
         public async Task AddRangeAsync(IIdentity user, IEnumerable<T> newItems)
         {
-            await Task.Factory.StartNew(() =>
-            {
-                _dbset.AddRange(newItems);
-            });
+            await Task.Factory.StartNew(() => { _dbset.AddRange(newItems); });
         }
 
 
         public void Dispose()
         {
-            foreach (KeyValuePair<string, IEfRepository> childRepo in _childRepositories)
+            foreach (var childRepo in _childRepositories)
             {
                 childRepo.Value?.Dispose();
             }
+
             if (_disposeDbContextOnDispose)
             {
                 _dbcontext?.Dispose();
@@ -154,10 +164,7 @@ namespace BLM.EF7
 
         public async Task RemoveAsync(IIdentity user, T item)
         {
-            await Task.Factory.StartNew(() =>
-            {
-                _dbset.Remove(item);
-            });
+            await Task.Factory.StartNew(() => { _dbset.Remove(item); });
         }
 
         public void RemoveRange(IIdentity usr, IEnumerable<T> items)
@@ -167,10 +174,7 @@ namespace BLM.EF7
 
         public async Task RemoveRangeAsync(IIdentity user, IEnumerable<T> items)
         {
-            await Task.Factory.StartNew(() =>
-            {
-                _dbset.RemoveRange(items);
-            });
+            await Task.Factory.StartNew(() => { _dbset.RemoveRange(items); });
         }
 
         private AuthorizationResult AuthorizeEntityChange(IIdentity user, EntityEntry ent)
@@ -180,29 +184,36 @@ namespace BLM.EF7
 
         public async Task<AuthorizationResult> AuthorizeEntityChangeAsync(IIdentity user, EntityEntry ent)
         {
-
             if (ent.State == EntityState.Unchanged || ent.State == EntityState.Detached)
+            {
                 return AuthorizationResult.Success();
+            }
 
             if (ent.Entity is T)
             {
                 switch (ent.State)
                 {
                     case EntityState.Added:
-                        T interpreted = Interpret.BeforeCreate(ent.Entity as T, GetContextInfo(user));
+                        var interpreted = Interpret.BeforeCreate(ent.Entity as T, GetContextInfo(user));
                         return (await Authorize.CreateAsync(interpreted, GetContextInfo(user))).CreateAggregateResult();
 
                     case EntityState.Modified:
                         var original = CreateWithValues(ent.OriginalValues);
                         var modified = CreateWithValues(ent.CurrentValues);
-                        var modifiedInterpreted = Interpret.BeforeModify((T)original, (T)modified, GetContextInfo(user));
+                        var modifiedInterpreted =
+                            Interpret.BeforeModify((T) original, (T) modified, GetContextInfo(user));
                         foreach (var property in ent.CurrentValues.Properties)
                         {
-                            ent.CurrentValues[property.Name] = modifiedInterpreted.GetType().GetProperty(property.Name)?.GetValue(modifiedInterpreted, null);
+                            ent.CurrentValues[property.Name] = modifiedInterpreted.GetType().GetProperty(property.Name)
+                                ?.GetValue(modifiedInterpreted, null);
                         }
-                        return (await Authorize.ModifyAsync((T)original, (T)modifiedInterpreted, GetContextInfo(user))).CreateAggregateResult();
+
+                        return (await Authorize.ModifyAsync((T) original, modifiedInterpreted, GetContextInfo(user)))
+                            .CreateAggregateResult();
                     case EntityState.Deleted:
-                        return (await Authorize.RemoveAsync((T)CreateWithValues(ent.OriginalValues, ent.Entity.GetType()), GetContextInfo(user))).CreateAggregateResult();
+                        return (await Authorize.RemoveAsync(
+                                (T) CreateWithValues(ent.OriginalValues, ent.Entity.GetType()), GetContextInfo(user)))
+                            .CreateAggregateResult();
                     default:
                         return AuthorizationResult.Fail("The entity state is invalid", ent.Entity);
                 }
@@ -219,6 +230,7 @@ namespace BLM.EF7
             {
                 type = typeof(T);
             }
+
             try
             {
                 return values.ToObject();
@@ -234,11 +246,15 @@ namespace BLM.EF7
                     var value = values.GetValue<object>(name);
                     var property = type.GetProperty(name);
 
-                    if (value == null) continue;
+                    if (value == null)
+                    {
+                        continue;
+                    }
 
                     var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
                     property.SetValue(entity, Convert.ChangeType(value, propertyType), null);
                 }
+
                 return entity;
             }
         }
@@ -262,12 +278,14 @@ namespace BLM.EF7
                 {
                     if (entityChange.State == EntityState.Modified)
                     {
-                        await Listen.ModificationFailedAsync(CreateWithValues(entityChange.OriginalValues), entityChange.Entity as T, GetContextInfo(user));
+                        await Listen.ModificationFailedAsync(CreateWithValues(entityChange.OriginalValues),
+                            entityChange.Entity as T, GetContextInfo(user));
                     }
                     else if (entityChange.State == EntityState.Deleted)
                     {
                         await Listen.RemoveFailedAsync(CreateWithValues(entityChange.OriginalValues), contextInfo);
                     }
+
                     throw new AuthorizationFailedException(authResult);
                 }
             }
@@ -299,16 +317,17 @@ namespace BLM.EF7
                     });
                 }
             }
+
             await _dbcontext.SaveChangesAsync();
             await DistributeToListenersAsync(added, contextInfo, modified, removed);
         }
 
-        public async Task DistributeToListenersAsync(List<object> added, EfContextInfo contextInfo, List<Tuple<object, object>> modified, List<object> removed, bool isChildRepository = false)
+        public async Task DistributeToListenersAsync(List<object> added, EfContextInfo contextInfo,
+            List<Tuple<object, object>> modified, List<object> removed, bool isChildRepository = false)
         {
-
             if (!isChildRepository)
             {
-                List<Type> otherTypes = added.Where(a => !(a is T)).Select(a => a.GetType()).ToList();
+                var otherTypes = added.Where(a => !(a is T)).Select(a => a.GetType()).ToList();
                 otherTypes.AddRange(modified.Where(a => !(a.Item1 is T)).Select(a => a.Item1.GetType()));
                 otherTypes.AddRange(removed.Where(a => !(a is T)).Select(a => a.GetType()));
                 foreach (var otherType in otherTypes.Distinct())
@@ -325,8 +344,10 @@ namespace BLM.EF7
             {
                 await Listen.CreatedAsync(addedEntry, contextInfo);
             }
+
             //var t2 = modified.Where(a => a is Tuple<T,T>).Cast<Tuple<T,T>>().Select(async a =>await Listen.ModifiedAsync((a).Item1, (a).Item2, contextInfo));
-            foreach (var modifiedEntry in modified.Where(a => a.Item1 is T && a.Item2 is T).Cast<Tuple<object, object>>())
+            foreach (var modifiedEntry in modified.Where(a => a.Item1 is T && a.Item2 is T)
+                .Cast<Tuple<object, object>>())
             {
                 await Listen.ModifiedAsync(modifiedEntry.Item1 as T, modifiedEntry.Item2 as T, contextInfo);
             }
@@ -336,7 +357,6 @@ namespace BLM.EF7
             {
                 await Listen.RemovedAsync(removedEntry, contextInfo);
             }
-
         }
 
         public void SetEntityState(T entity, EntityState newState)
@@ -350,14 +370,17 @@ namespace BLM.EF7
             {
                 type = a.Entity.GetType();
             }
+
             return CreateWithValues(a.CurrentValues.Clone(), type);
         }
+
         private static object SelectOriginal(EntityEntry a, Type type = null)
         {
             if (type == null)
             {
                 type = a.Entity.GetType();
             }
+
             return CreateWithValues(a.OriginalValues.Clone(), type);
         }
 
@@ -374,8 +397,7 @@ namespace BLM.EF7
 
         public IRepository<T2> GetChildRepositoryFor<T2>() where T2 : class
         {
-            return (IRepository<T2>)GetChildRepositoryFor(typeof(T2));
+            return (IRepository<T2>) GetChildRepositoryFor(typeof(T2));
         }
-
     }
 }

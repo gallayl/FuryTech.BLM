@@ -18,6 +18,7 @@ namespace BLM.EF7.Tests
         {
             base.OnModelCreating(mb);
             mb.Entity<LogicalDeleteEntity>().HasBaseType<MockEntity>();
+            mb.Entity<InheritedLogicalDeleteEntity>().HasBaseType<MockEntity>();
         }
 
         public virtual DbSet<MockEntity> MockEntities { get; set; }
