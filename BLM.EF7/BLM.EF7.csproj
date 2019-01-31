@@ -14,6 +14,12 @@
     <Company>FuryTechs</Company>
     <Product>FuryTechs.BLM.EF7</Product>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Version>2.0.8</Version>
+    <AssemblyVersion>2.0.8.0</AssemblyVersion>
+    <PackageProjectUrl>https://github.com/FuryTechs/FuryTech.BLM</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/FuryTechs/FuryTech.BLM</RepositoryUrl>
+    <RepositoryType>GIT</RepositoryType>
+    <PackageLicenseUrl>https://github.com/FuryTechs/FuryTech.BLM/blob/master/License.md</PackageLicenseUrl>
   </PropertyGroup>
 
   <ItemGroup>
